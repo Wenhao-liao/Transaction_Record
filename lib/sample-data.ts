@@ -6,8 +6,12 @@ export const trades: Trade[] = [
     stockName: "英伟达",
     stockCode: "NVDA",
     market: "美股",
+    sector: "半导体",
+    tags: ["突破买入", "计划内交易"],
     buyPrice: 128.4,
+    tradeAmount: 12000,
     buyDate: "2026-06-28",
+    action: "买入",
     tradeType: "趋势交易",
     whyNow: "股价重新站上 20 日均线，成交量温和放大，AI 算力主线仍保持市场关注。",
     bullishFactors: "数据中心收入增长明确，生态壁垒高，机构资金持续流入科技龙头。",
@@ -18,15 +22,22 @@ export const trades: Trade[] = [
     stopLossPrice: 119.8,
     positionRatio: "12%",
     status: "持仓中",
-    currentReturn: "+6.8%"
+    currentReturn: "+6.8%",
+    planFollowed: "",
+    exitReview: "",
+    lessonLearned: ""
   },
   {
     id: "0700-2026-06-21",
     stockName: "腾讯控股",
     stockCode: "0700",
     market: "港股",
+    sector: "互联网",
+    tags: ["左侧买入", "计划内交易"],
     buyPrice: 382.2,
+    tradeAmount: 15000,
     buyDate: "2026-06-21",
+    action: "买入",
     tradeType: "长期投资",
     whyNow: "回调接近长期估值区间下沿，核心业务现金流稳定，适合分批配置。",
     bullishFactors: "游戏、广告和金融科技业务韧性强，回购持续改善每股价值。",
@@ -37,15 +48,22 @@ export const trades: Trade[] = [
     stopLossPrice: 344,
     positionRatio: "15%",
     status: "持仓中",
-    currentReturn: "+3.1%"
+    currentReturn: "+3.1%",
+    planFollowed: "",
+    exitReview: "",
+    lessonLearned: ""
   },
   {
     id: "300750-2026-06-10",
     stockName: "宁德时代",
     stockCode: "300750",
     market: "A股",
+    sector: "新能源",
+    tags: ["回调低吸", "情绪交易"],
     buyPrice: 204.7,
+    tradeAmount: 8000,
     buyDate: "2026-06-10",
+    action: "买入",
     tradeType: "反弹交易",
     whyNow: "连续下跌后出现放量阳线，新能源板块有短线修复迹象。",
     bullishFactors: "行业龙头优势明显，新技术发布带动情绪修复。",
@@ -56,7 +74,10 @@ export const trades: Trade[] = [
     stopLossPrice: 194.5,
     positionRatio: "8%",
     status: "持仓中",
-    currentReturn: "-1.4%"
+    currentReturn: "-1.4%",
+    planFollowed: "",
+    exitReview: "",
+    lessonLearned: ""
   }
 ];
 
