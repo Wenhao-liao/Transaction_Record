@@ -2,6 +2,8 @@
 
 import {
   Bell,
+  ChevronRight,
+  Smartphone,
   RefreshCcw,
   ShieldAlert,
   Palette,
@@ -296,6 +298,32 @@ export default function ProfilePage() {
             <Button className="w-full">登录账户</Button>
           </Link>
         ) : null}
+
+        <Card className="border-0">
+          <CardContent className="p-5">
+            <Link className="flex items-center gap-3" href="/profile/security">
+              <RowIcon icon={UserRound} className="bg-blue-50 text-primary" />
+              <div className="min-w-0 flex-1">
+                <p className="font-bold text-slate-950">账号安全</p>
+                <p className="mt-1 truncate text-sm text-slate-500">{email || "管理登录邮箱和密码"}</p>
+              </div>
+              <ChevronRight className="h-5 w-5 text-slate-300" />
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0">
+          <CardContent className="p-5">
+            <Link className="flex items-center gap-3" href="/install">
+              <RowIcon icon={Smartphone} className="bg-sky-50 text-sky-600" />
+              <div className="min-w-0 flex-1">
+                <p className="font-bold text-slate-950">安装到手机桌面</p>
+                <p className="mt-1 truncate text-sm text-slate-500">像 App 一样打开交易日志</p>
+              </div>
+              <ChevronRight className="h-5 w-5 text-slate-300" />
+            </Link>
+          </CardContent>
+        </Card>
 
         <Card className="border-0">
           <CardHeader className="pb-2">

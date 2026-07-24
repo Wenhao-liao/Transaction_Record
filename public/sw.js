@@ -1,5 +1,12 @@
-const CACHE_NAME = "trade-journal-v2";
-const STATIC_ASSETS = ["/manifest.webmanifest", "/icon.svg"];
+const CACHE_NAME = "trade-journal-v3";
+const STATIC_ASSETS = [
+  "/manifest.webmanifest",
+  "/icon.svg",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
+  "/apple-touch-icon.png",
+  "/offline"
+];
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -22,7 +29,7 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (event.request.mode === "navigate") {
-    event.respondWith(fetch(event.request).catch(() => caches.match("/")));
+    event.respondWith(fetch(event.request).catch(() => caches.match("/offline")));
     return;
   }
 

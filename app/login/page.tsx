@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { KeyRound, Mail, Smartphone } from "lucide-react";
+import { KeyRound, Mail } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 
-type LoginMode = "phone" | "email";
+type AuthMode = "login" | "register" | "forgot";
 
 function formatAuthError(message: string) {
   const normalizedMessage = message.toLowerCase();
@@ -20,16 +20,16 @@ function formatAuthError(message: string) {
     return "登录邮件发送过于频繁，请稍后再试。";
   }
 
-  if (normalizedMessage.includes("sms") && normalizedMessage.includes("rate")) {
-    return "短信验证码发送过于频繁，请稍后再试。";
+  if (normalizedMessage.includes("invalid login credentials")) {
+    return "邮箱或密码不正确，或邮箱尚未完成确认。";
   }
 
-  if (normalizedMessage.includes("invalid") && normalizedMessage.includes("token")) {
-    return "验证码不正确或已过期，请重新输入。";
+  if (normalizedMessage.includes("password")) {
+    return "密码格式不符合要求，请至少输入 6 位。";
   }
 
-  if (normalizedMessage.includes("phone")) {
-    return "手机号格式不正确，请使用国际格式，例如 +8613800138000。";
+  if (normalizedMessage.includes("already registered") || normalizedMessage.includes("already exists")) {
+    return "这个邮箱已经注册过，请直接登录。";
   }
 
   return message;
@@ -37,29 +37,21 @@ function formatAuthError(message: string) {
 
 export default function LoginPage() {
   const router = useRouter();
-  const [mode, setMode] = useState<LoginMode>("phone");
+  const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [countdown, setCountdown] = useState(0);
 
-  useEffect(() => {
-    if (countdown <= 0) {
-      return;
-    }
+  function handleModeChange(nextMode: AuthMode) {
+    setMode(nextMode);
+    setMessage("");
+    setPassword("");
+    setConfirmPassword("");
+  }
 
-    const timer = window.setTimeout(() => {
-      setCountdown((current) => Math.max(0, current - 1));
-    }, 1000);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [countdown]);
-
-  async function handleEmailLogin(event: React.FormEvent<HTMLFormElement>) {
+  async function handlePasswordAuth(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!isSupabaseConfigured) {
@@ -67,15 +59,29 @@ export default function LoginPage() {
       return;
     }
 
+    if (password.length < 6) {
+      setMessage("密码至少需要 6 位。");
+      return;
+    }
+
+    if (mode === "register" && password !== confirmPassword) {
+      setMessage("两次输入的密码不一致。");
+      return;
+    }
+
     setIsLoading(true);
     setMessage("");
 
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/`
-      }
-    });
+    const { data, error } =
+      mode === "login"
+        ? await supabase.auth.signInWithPassword({
+            email,
+            password
+          })
+        : await supabase.auth.signUp({
+            email,
+            password
+          });
 
     setIsLoading(false);
 
@@ -84,61 +90,37 @@ export default function LoginPage() {
       return;
     }
 
-    setCountdown(60);
-    setMessage("登录链接已发送，请打开邮箱完成登录。");
-  }
-
-  async function handleSendPhoneCode(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!isSupabaseConfigured) {
-      setMessage("Supabase 尚未配置，请先设置环境变量。");
-      return;
-    }
-
-    setIsLoading(true);
-    setMessage("");
-
-    const { error } = await supabase.auth.signInWithOtp({
-      phone
-    });
-
-    setIsLoading(false);
-
-    if (error) {
-      setMessage(formatAuthError(error.message));
-      return;
-    }
-
-    setCountdown(60);
-    setMessage("短信验证码已发送，请在 60 秒内输入。");
-  }
-
-  async function handleVerifyPhoneCode(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!phone || !code) {
-      setMessage("请填写手机号和验证码。");
-      return;
-    }
-
-    setIsLoading(true);
-    setMessage("");
-
-    const { error } = await supabase.auth.verifyOtp({
-      phone,
-      token: code,
-      type: "sms"
-    });
-
-    setIsLoading(false);
-
-    if (error) {
-      setMessage(formatAuthError(error.message));
+    if (mode === "register" && !data.session) {
+      setMessage("注册成功，请先打开邮箱完成确认，然后再回来登录。");
       return;
     }
 
     router.push("/");
+  }
+
+  async function handleSendResetEmail(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!isSupabaseConfigured) {
+      setMessage("Supabase 尚未配置，请先设置环境变量。");
+      return;
+    }
+
+    setIsLoading(true);
+    setMessage("");
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`
+    });
+
+    setIsLoading(false);
+
+    if (error) {
+      setMessage(formatAuthError(error.message));
+      return;
+    }
+
+    setMessage("重置密码邮件已发送，请打开邮箱里的链接设置新密码。");
   }
 
   return (
@@ -154,96 +136,100 @@ export default function LoginPage() {
 
         <Card className="mt-6 border-0">
           <CardHeader>
-            <CardTitle>验证码登录</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-primary" />
+              邮箱登录
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="mb-4 grid grid-cols-2 gap-2 rounded-2xl bg-slate-100 p-1">
               {[
-                { icon: Smartphone, label: "手机号", value: "phone" },
-                { icon: Mail, label: "邮箱", value: "email" }
+                { label: "登录", value: "login" },
+                { label: "注册", value: "register" }
               ].map((item) => {
-                const Icon = item.icon;
                 const isActive = mode === item.value;
 
                 return (
                   <button
                     className={cn(
-                      "flex h-10 items-center justify-center gap-2 rounded-xl text-sm font-bold transition",
+                      "h-10 rounded-xl text-sm font-bold transition",
                       isActive ? "bg-white text-primary shadow-sm" : "text-slate-500"
                     )}
                     key={item.value}
                     onClick={() => {
-                      setMode(item.value as LoginMode);
-                      setMessage("");
+                      handleModeChange(item.value as AuthMode);
                     }}
                     type="button"
                   >
-                    <Icon className="h-4 w-4" />
                     {item.label}
                   </button>
                 );
               })}
             </div>
 
-            {mode === "phone" ? (
-              <div className="space-y-4">
-                <form className="space-y-4" onSubmit={handleSendPhoneCode}>
-                  <div className="space-y-2">
-                    <Label>手机号</Label>
-                    <Input
-                      autoComplete="tel"
-                      inputMode="tel"
-                      onChange={(event) => setPhone(event.target.value.trim())}
-                      placeholder="+8613800138000"
-                      required
-                      type="tel"
-                      value={phone}
-                    />
-                    <p className="text-xs leading-5 text-slate-500">
-                      请使用国际格式，例如中国大陆手机号写成 +86 开头。
-                    </p>
-                  </div>
-                  <Button className="w-full" disabled={isLoading || countdown > 0} type="submit">
-                    {countdown > 0 ? `${countdown} 秒后可重发` : isLoading ? "发送中..." : "发送短信验证码"}
-                  </Button>
-                </form>
-
-                <form className="space-y-4" onSubmit={handleVerifyPhoneCode}>
-                  <div className="space-y-2">
-                    <Label>验证码</Label>
-                    <Input
-                      inputMode="numeric"
-                      maxLength={6}
-                      onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
-                      placeholder="6 位验证码"
-                      required
-                      value={code}
-                    />
-                  </div>
-                  <Button className="w-full" disabled={isLoading || code.length < 6} type="submit">
-                    {isLoading ? "验证中..." : "验证并登录"}
-                  </Button>
-                </form>
+            <form className="space-y-4" onSubmit={mode === "forgot" ? handleSendResetEmail : handlePasswordAuth}>
+              <div className="space-y-2">
+                <Label>邮箱</Label>
+                <Input
+                  autoComplete="email"
+                  inputMode="email"
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="you@example.com"
+                  required
+                  type="email"
+                  value={email}
+                />
               </div>
-            ) : (
-              <form className="space-y-4" onSubmit={handleEmailLogin}>
+
+              {mode !== "forgot" ? (
                 <div className="space-y-2">
-                  <Label>邮箱</Label>
+                  <Label>密码</Label>
                   <Input
-                    autoComplete="email"
-                    inputMode="email"
-                    onChange={(event) => setEmail(event.target.value)}
-                    placeholder="you@example.com"
+                    autoComplete={mode === "login" ? "current-password" : "new-password"}
+                    minLength={6}
+                    onChange={(event) => setPassword(event.target.value)}
+                    placeholder="至少 6 位密码"
                     required
-                    type="email"
-                    value={email}
+                    type="password"
+                    value={password}
                   />
                 </div>
-                <Button className="w-full" disabled={isLoading || countdown > 0} type="submit">
-                  {countdown > 0 ? `${countdown} 秒后可重发` : isLoading ? "发送中..." : "发送登录链接"}
-                </Button>
-              </form>
-            )}
+              ) : null}
+
+              {mode === "register" ? (
+                <div className="space-y-2">
+                  <Label>确认密码</Label>
+                  <Input
+                    autoComplete="new-password"
+                    minLength={6}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    placeholder="再次输入密码"
+                    required
+                    type="password"
+                    value={confirmPassword}
+                  />
+                </div>
+              ) : null}
+
+              <p className="text-xs leading-5 text-slate-500">
+                {mode === "login"
+                  ? "使用注册邮箱和密码登录，你的交易记录会同步保存到云端。"
+                  : mode === "register"
+                    ? "注册后邮箱会绑定为你的账号，用于登录和接收重要通知。"
+                    : "如果这个邮箱已经注册，我们会发送一封重置密码邮件。"}
+              </p>
+
+              <Button className="w-full" disabled={isLoading} type="submit">
+                {isLoading ? "处理中..." : mode === "login" ? "登录" : mode === "register" ? "注册账号" : "发送重置邮件"}
+              </Button>
+            </form>
+            <button
+              className="mt-4 w-full text-center text-sm font-semibold text-primary"
+              onClick={() => handleModeChange(mode === "forgot" ? "login" : "forgot")}
+              type="button"
+            >
+              {mode === "forgot" ? "返回登录" : "忘记密码？"}
+            </button>
             {message ? <p className="mt-4 text-sm leading-6 text-slate-500">{message}</p> : null}
             <Button className="mt-3 w-full" onClick={() => router.push("/")} type="button" variant="ghost">
               返回首页

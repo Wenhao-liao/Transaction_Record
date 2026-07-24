@@ -28,8 +28,11 @@ supabase/schema.sql
 在 Supabase Dashboard 中进入 Authentication：
 
 - 开启 Email 登录
-- 如果使用 Magic Link，确认站点 URL 配置为你的线上域名
-- 本地开发时可加入 `http://localhost:3000`
+- 开启 Email/Password 登录
+- 注册确认邮件可以保留开启，用于确认用户邮箱归属
+- 确认站点 URL 配置为你的线上域名
+- Redirect URLs 加入 `https://你的域名/reset-password`
+- 本地开发时可加入 `http://localhost:3000`、`http://localhost:3000/reset-password`、`http://localhost:3002` 和 `http://localhost:3002/reset-password`
 
 ## 4. 配置环境变量
 
@@ -42,6 +45,13 @@ OPENAI_API_KEY=你的 OpenAI API Key
 OPENAI_API_BASE_URL=https://api.openai.com/v1
 OPENAI_MODEL=gpt-4.1-mini
 OPENAI_FALLBACK_MODELS=
+SUPABASE_AUTH_HOOK_SECRET=你的 Supabase Send SMS Hook Secret
+TENCENTCLOUD_SECRET_ID=你的腾讯云 SecretId
+TENCENTCLOUD_SECRET_KEY=你的腾讯云 SecretKey
+TENCENT_SMS_SDK_APP_ID=你的短信应用 SDKAppID
+TENCENT_SMS_SIGN_NAME=你的短信签名
+TENCENT_SMS_TEMPLATE_ID=你的短信模板 ID
+TENCENT_SMS_REGION=ap-guangzhou
 ```
 
 Vercel 部署时，在 Project Settings -> Environment Variables 中配置同样的变量。
@@ -69,9 +79,37 @@ OPENAI_FALLBACK_MODELS=备用模型1,备用模型2
 - 港股：腾讯行情接口
 - 美股：腾讯行情接口
 
-## 5. 当前数据流
+## 5. 预留腾讯云短信登录
 
-- 用户通过 `/login` 邮箱登录
+项目保留了 Supabase Send SMS Hook 接口，但当前登录页暂未开放手机号登录：
+
+```text
+/api/auth/send-sms
+```
+
+上线后，在 Supabase Dashboard -> Authentication -> Hooks -> Send SMS 中配置 HTTP Request：
+
+```text
+https://你的域名/api/auth/send-sms
+```
+
+然后把 Supabase 生成的 Hook Secret 填到 Vercel 环境变量 `SUPABASE_AUTH_HOOK_SECRET`。
+
+腾讯云短信侧需要先完成：
+
+- 开通短信服务
+- 创建短信应用，拿到 `TENCENT_SMS_SDK_APP_ID`
+- 申请短信签名，填入 `TENCENT_SMS_SIGN_NAME`
+- 申请验证码模板，模板里保留 1 个变量用于验证码，填入 `TENCENT_SMS_TEMPLATE_ID`
+- 创建访问密钥，填入 `TENCENTCLOUD_SECRET_ID` 和 `TENCENTCLOUD_SECRET_KEY`
+
+手机号需要使用国际格式，例如中国大陆手机号写作 `+8613800138000`。
+
+## 6. 当前数据流
+
+- 用户通过 `/login` 邮箱和密码登录，也可以注册新账号
+- 登录页支持忘记密码，重置邮件会跳转到 `/reset-password`
+- “我的”页支持修改登录邮箱和登录密码
 - 首页从 Supabase `trades` 表读取交易记录
 - 新建交易写入 Supabase `trades` 表
 - 新建交易填写交易金额，系统按“我的”里设置的账户总资金自动计算仓位比例
@@ -80,6 +118,6 @@ OPENAI_FALLBACK_MODELS=备用模型1,备用模型2
 - “我的”页读取用户邮箱、交易统计和 `user_preferences`
 - 首页点击 AI 周报后，请求 `/api/weekly-report`，服务端调用 OpenAI 生成报告并保存到 `weekly_reports`
 
-## 6. 权限边界
+## 7. 权限边界
 
 RLS 使用 `auth.uid() = user_id` 做隔离。前端即使请求其他用户的记录，也不会通过数据库权限校验。

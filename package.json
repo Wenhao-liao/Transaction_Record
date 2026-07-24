@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "pwa:assets": "node scripts/generate-pwa-assets.mjs",
     "start": "next start",
     "lint": "next lint"
   },
