@@ -11,7 +11,7 @@ export const supabase = createClient(
 );
 
 export type TradeType = "趋势交易" | "反弹交易" | "长期投资" | "事件驱动" | "止盈" | "止损";
-export type TradeAction = "买入" | "清仓" | "做T买入" | "做T卖出";
+export type TradeAction = "初始持仓" | "买入" | "清仓" | "做T买入" | "做T卖出";
 
 export type Trade = {
   id: string;
@@ -38,6 +38,7 @@ export type Trade = {
   planFollowed: string;
   exitReview: string;
   lessonLearned: string;
+  isInitialPosition: boolean;
 };
 
 export type TradeRow = {
@@ -66,6 +67,7 @@ export type TradeRow = {
   plan_followed: string | null;
   exit_review: string | null;
   lesson_learned: string | null;
+  is_initial_position: boolean | null;
   created_at: string;
   updated_at: string;
 };

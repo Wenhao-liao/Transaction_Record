@@ -10,6 +10,7 @@ import {
   ArrowRight,
   ArrowUpRight,
   ClipboardList,
+  FileInput,
   Repeat,
   Sparkles,
   Trash2
@@ -47,7 +48,7 @@ import {
   loadJournalData,
   SupabaseConfigError
 } from "@/lib/trades-api";
-import { getActionTone, getTradeAction } from "@/lib/trade-display";
+import { getActionTone, getTradeAction, isReviewableTrade } from "@/lib/trade-display";
 import { isSupabaseConfigured, supabase, type Trade, type UserPreferences } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 
@@ -133,7 +134,8 @@ export function DashboardClient() {
   const [errorMessage, setErrorMessage] = useState("");
   const [reportLoadingStep, setReportLoadingStep] = useState(0);
   const [hideRiskAlertsOnHome, setHideRiskAlertsOnHome] = useState(false);
-  const hasTrades = trades.length > 0;
+  const reviewableTrades = useMemo(() => trades.filter(isReviewableTrade), [trades]);
+  const hasTrades = reviewableTrades.length > 0;
   const currentPositions = useMemo(
     () => buildCurrentPositions(trades, preferences?.account_total_amount, exchangeRates),
     [exchangeRates, preferences?.account_total_amount, trades]
@@ -313,10 +315,10 @@ export function DashboardClient() {
   const weeklyReviewCount = useMemo(() => {
     const { weekStart, weekEnd } = getCurrentWeekRange();
 
-    return trades.filter((trade) => trade.buyDate >= weekStart && trade.buyDate <= weekEnd).length;
-  }, [trades]);
+    return reviewableTrades.filter((trade) => trade.buyDate >= weekStart && trade.buyDate <= weekEnd).length;
+  }, [reviewableTrades]);
 
-  const recentActivities = trades.slice(0, 3).map((trade) => ({
+  const recentActivities = reviewableTrades.slice(0, 3).map((trade) => ({
     id: trade.id,
     title: getTradeAction(trade),
     subtitle: `${trade.stockName} ${trade.stockCode} · ${trade.tradeType}${
@@ -564,6 +566,21 @@ export function DashboardClient() {
           </div>
         </div>
 
+        <Link href="/positions/import" className="block">
+          <Card className="border-0 bg-blue-50">
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-primary">
+                <FileInput className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-bold text-slate-950">导入初始持仓</p>
+                <p className="mt-1 text-sm leading-5 text-slate-500">已有股票仓位？导入后只计入持仓，不进入交易复盘。</p>
+              </div>
+              <ArrowRight className="h-4 w-4 text-blue-300" />
+            </CardContent>
+          </Card>
+        </Link>
+
         {hasCurrentPositions ? (
           <div className="grid grid-cols-4 rounded-2xl bg-slate-100 p-1">
             {positionTabs.map((tab) => {
@@ -776,6 +793,11 @@ export function DashboardClient() {
               </p>
               <Link href="/trades/new" className="mt-5 w-full">
                 <Button className="w-full">记录第一笔交易</Button>
+              </Link>
+              <Link href="/positions/import" className="mt-3 w-full">
+                <Button className="w-full" variant="secondary">
+                  导入已有持仓
+                </Button>
               </Link>
             </CardContent>
           </Card>

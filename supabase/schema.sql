@@ -11,7 +11,7 @@ create table if not exists public.trades (
   buy_price numeric not null,
   trade_amount numeric,
   buy_date date not null,
-  action text not null check (action in ('买入', '清仓', '做T买入', '做T卖出')),
+  action text not null check (action in ('初始持仓', '买入', '清仓', '做T买入', '做T卖出')),
   trade_type text not null check (trade_type in ('趋势交易', '反弹交易', '长期投资', '事件驱动', '止盈', '止损')),
   why_now text,
   bullish_factors text,
@@ -26,6 +26,7 @@ create table if not exists public.trades (
   plan_followed text,
   exit_review text,
   lesson_learned text,
+  is_initial_position boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -74,6 +75,26 @@ add column if not exists exit_review text;
 
 alter table public.trades
 add column if not exists lesson_learned text;
+
+alter table public.trades
+add column if not exists is_initial_position boolean not null default false;
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_constraint
+    where conname = 'trades_action_check'
+  ) then
+    alter table public.trades
+    drop constraint trades_action_check;
+  end if;
+
+  alter table public.trades
+  add constraint trades_action_check
+  check (action in ('初始持仓', '买入', '清仓', '做T买入', '做T卖出'));
+end
+$$;
 
 alter table public.user_preferences
 add column if not exists account_total_amount numeric;

@@ -45,6 +45,7 @@ function isMissingMigrationError(error: unknown) {
     message.includes("plan_followed") ||
     message.includes("exit_review") ||
     message.includes("lesson_learned") ||
+    message.includes("is_initial_position") ||
     message.includes("schema cache") ||
     message.includes("Could not find")
   );
@@ -93,7 +94,8 @@ export function tradeFromRow(row: TradeRow): Trade {
     currentReturn: row.current_return || "0%",
     planFollowed: row.plan_followed || "",
     exitReview: row.exit_review || "",
-    lessonLearned: row.lesson_learned || ""
+    lessonLearned: row.lesson_learned || "",
+    isInitialPosition: Boolean(row.is_initial_position || row.action === "初始持仓")
   };
 }
 
@@ -148,7 +150,8 @@ function tradeToInsert(trade: Trade, userId: string) {
     current_return: trade.currentReturn,
     plan_followed: trade.planFollowed,
     exit_review: trade.exitReview,
-    lesson_learned: trade.lessonLearned
+    lesson_learned: trade.lessonLearned,
+    is_initial_position: trade.isInitialPosition
   };
 }
 

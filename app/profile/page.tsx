@@ -23,6 +23,7 @@ import { getCurrentWeekRange } from "@/lib/date-range";
 import { getCachedExchangeRates } from "@/lib/quotes";
 import { buildCurrentPositions } from "@/lib/positions";
 import { getReturnColorModeLabel, type ReturnColorMode } from "@/lib/return-colors";
+import { isReviewableTrade } from "@/lib/trade-display";
 import {
   AuthRequiredError,
   clearJournalDataCache,
@@ -130,12 +131,14 @@ export default function ProfilePage() {
   const weeklyReviewCount = useMemo(() => {
     const { weekStart, weekEnd } = getCurrentWeekRange();
 
-    return trades.filter((trade) => trade.buyDate >= weekStart && trade.buyDate <= weekEnd).length;
+    return trades.filter((trade) => isReviewableTrade(trade) && trade.buyDate >= weekStart && trade.buyDate <= weekEnd)
+      .length;
   }, [trades]);
+  const reviewableTradeCount = useMemo(() => trades.filter(isReviewableTrade).length, [trades]);
 
   const stats = useMemo(
     () => [
-      { label: "交易记录", value: String(trades.length), helper: "累计" },
+      { label: "交易记录", value: String(reviewableTradeCount), helper: "累计" },
       {
         label: "当前持仓",
         value: String(currentPositions.length),
@@ -143,7 +146,7 @@ export default function ProfilePage() {
       },
       { label: "待复盘", value: String(weeklyReviewCount), helper: "本周" }
     ],
-    [currentPositions.length, trades.length, weeklyReviewCount]
+    [currentPositions.length, reviewableTradeCount, weeklyReviewCount]
   );
 
   async function handleSignOut() {

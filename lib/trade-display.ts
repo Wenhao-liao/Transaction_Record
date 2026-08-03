@@ -3,7 +3,7 @@ import type { Trade, TradeAction } from "@/lib/supabase";
 export const tradeActions: TradeAction[] = ["买入", "清仓", "做T买入", "做T卖出"];
 
 export function isOpeningAction(action: TradeAction) {
-  return action === "买入" || action === "做T买入";
+  return action === "初始持仓" || action === "买入" || action === "做T买入";
 }
 
 export function isClosingAction(action: TradeAction) {
@@ -18,7 +18,19 @@ export function getTradeAction(trade: Trade) {
   return trade.action || "买入";
 }
 
+export function isInitialPositionTrade(trade: Trade) {
+  return trade.isInitialPosition || getTradeAction(trade) === "初始持仓";
+}
+
+export function isReviewableTrade(trade: Trade) {
+  return !isInitialPositionTrade(trade);
+}
+
 export function getActionTone(action: TradeAction) {
+  if (action === "初始持仓") {
+    return "bg-sky-50 text-sky-600";
+  }
+
   if (action === "清仓" || action === "做T卖出") {
     return "bg-red-50 text-red-600";
   }
@@ -31,10 +43,18 @@ export function getActionTone(action: TradeAction) {
 }
 
 export function getPriceLabel(action: TradeAction) {
+  if (action === "初始持仓") {
+    return "持仓成本";
+  }
+
   return isClosingAction(action) ? "卖出价" : "买入价";
 }
 
 export function getDateLabel(action: TradeAction) {
+  if (action === "初始持仓") {
+    return "导入日期";
+  }
+
   return isClosingAction(action) ? "卖出日期" : "买入日期";
 }
 

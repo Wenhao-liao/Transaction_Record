@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getCurrentWeekRange } from "@/lib/date-range";
 import { buildCurrentPositions } from "@/lib/positions";
 import { isSupabaseConfigured, supabaseAnonKey, supabaseUrl, type TradeRow, type UserPreferences } from "@/lib/supabase";
+import { isReviewableTrade } from "@/lib/trade-display";
 import { tradeFromRow } from "@/lib/trades-api";
 import { buildWeeklyReportSnapshot } from "@/lib/weekly-report-snapshot";
 
@@ -273,7 +274,8 @@ export async function POST(request: Request) {
     }
 
     const trades = ((tradesData || []) as TradeRow[]).map(tradeFromRow);
-    const weeklyTrades = trades.filter((trade) => trade.buyDate >= weekStart && trade.buyDate <= weekEnd);
+    const reviewableTrades = trades.filter(isReviewableTrade);
+    const weeklyTrades = reviewableTrades.filter((trade) => trade.buyDate >= weekStart && trade.buyDate <= weekEnd);
     const preferences = preferencesData as UserPreferences | null;
     const positions = buildCurrentPositions(trades, preferences?.account_total_amount);
     const snapshot = buildWeeklyReportSnapshot({
@@ -289,7 +291,7 @@ export async function POST(request: Request) {
       weekEnd,
       accountTotalAmount: preferences?.account_total_amount || null,
       snapshot,
-      tradeCount: trades.length,
+      tradeCount: reviewableTrades.length,
       weeklyTrades,
       currentPositions: positions.map((position) => ({
         stockName: position.stockName,

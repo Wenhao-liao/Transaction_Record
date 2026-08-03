@@ -272,7 +272,8 @@ export default function NewTradePage() {
       currentReturn: "0%",
       planFollowed: String(formData.get("planFollowed") || "").trim(),
       exitReview: String(formData.get("exitReview") || "").trim(),
-      lessonLearned: String(formData.get("lessonLearned") || "").trim()
+      lessonLearned: String(formData.get("lessonLearned") || "").trim(),
+      isInitialPosition: false
     };
 
     setIsSaving(true);
