@@ -118,7 +118,7 @@ function toEastmoneySecid(symbol: string) {
   const normalized = normalizeQuoteSymbol(symbol);
   const upperSymbol = symbol.toUpperCase();
 
-  if (upperSymbol.startsWith("SH.") || normalized.startsWith("6") || normalized.startsWith("9")) {
+  if (upperSymbol.startsWith("SH.") || /^[569]/.test(normalized)) {
     return `1.${normalized}`;
   }
 
@@ -144,7 +144,7 @@ function toTencentSymbol(request: QuoteRequest) {
 function toSinaSymbol(symbol: string) {
   const normalized = normalizeQuoteSymbol(symbol);
 
-  if (normalized.startsWith("6") || normalized.startsWith("9")) {
+  if (/^[569]/.test(normalized)) {
     return `sh${normalized}`;
   }
 
