@@ -17,15 +17,17 @@ import {
   getCurrencyLabel,
   type ExchangeRates
 } from "@/lib/currency";
-import { fetchExchangeRatesOnly, getCachedExchangeRates } from "@/lib/quotes";
+import { fetchExchangeRatesOnly, getCachedExchangeRates, normalizeQuoteSymbol } from "@/lib/quotes";
 import { createTradeId } from "@/lib/trade-id";
 import {
   AuthRequiredError,
   createTrade,
   DatabaseMigrationRequiredError,
+  DuplicateInitialPositionError,
   loadJournalData,
   SupabaseConfigError
 } from "@/lib/trades-api";
+import { isInitialPositionTrade } from "@/lib/trade-display";
 import type { Trade } from "@/lib/supabase";
 
 function Field({
@@ -48,6 +50,7 @@ export default function ImportInitialPositionPage() {
   const [marketInput, setMarketInput] = useState("美股");
   const [priceInput, setPriceInput] = useState("");
   const [shareQuantityInput, setShareQuantityInput] = useState("");
+  const [trades, setTrades] = useState<Trade[]>([]);
   const [accountTotalAmount, setAccountTotalAmount] = useState<number | null>(null);
   const [exchangeRates, setExchangeRates] = useState<ExchangeRates>(() => getCachedExchangeRates());
   const [isSaving, setIsSaving] = useState(false);
@@ -81,6 +84,7 @@ export default function ImportInitialPositionPage() {
       try {
         const journalData = await loadJournalData();
         setAccountTotalAmount(journalData.preferences.account_total_amount);
+        setTrades(journalData.trades);
       } catch (error) {
         if (error instanceof AuthRequiredError) {
           router.push("/login");
@@ -117,6 +121,19 @@ export default function ImportInitialPositionPage() {
 
     if (!accountTotalAmount) {
       setMessage("请先到“我的”里设置本金，再导入初始持仓。");
+      return;
+    }
+
+    const normalizedSymbol = normalizeQuoteSymbol(stockCode, String(formData.get("market") || "美股"));
+    const hasImportedInitialPosition = trades.some(
+      (trade) =>
+        isInitialPositionTrade(trade) &&
+        trade.market === String(formData.get("market") || "美股") &&
+        normalizeQuoteSymbol(trade.stockCode, trade.market) === normalizedSymbol
+    );
+
+    if (hasImportedInitialPosition) {
+      setMessage("这只股票已经导入过初始持仓，请不要重复导入。后续变化请使用新建交易记录。");
       return;
     }
 
@@ -171,6 +188,11 @@ export default function ImportInitialPositionPage() {
 
       if (error instanceof DatabaseMigrationRequiredError) {
         setMessage("保存失败：请先在 Supabase SQL Editor 重新执行 supabase/schema.sql，补齐初始持仓字段。");
+        return;
+      }
+
+      if (error instanceof DuplicateInitialPositionError) {
+        setMessage(error.message);
         return;
       }
 

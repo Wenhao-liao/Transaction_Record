@@ -1,4 +1,6 @@
+import { normalizeQuoteSymbol } from "@/lib/quotes";
 import { isSupabaseConfigured, supabase, type Trade, type TradeRow, type UserPreferences } from "@/lib/supabase";
+import { isInitialPositionTrade } from "@/lib/trade-display";
 
 type JournalData = {
   trades: Trade[];
@@ -27,6 +29,12 @@ export class DatabaseMigrationRequiredError extends Error {
   }
 }
 
+export class DuplicateInitialPositionError extends Error {
+  constructor() {
+    super("这只股票已经导入过初始持仓，请不要重复导入。后续变化请使用新建交易记录。");
+  }
+}
+
 function isMissingMigrationError(error: unknown) {
   if (!error || typeof error !== "object") {
     return false;
@@ -51,6 +59,22 @@ function isMissingMigrationError(error: unknown) {
   );
 }
 
+function isInitialPositionCompatibilityError(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const message = "message" in error && typeof error.message === "string" ? error.message : "";
+  const code = "code" in error && typeof error.code === "string" ? error.code : "";
+
+  return (
+    isMissingMigrationError(error) ||
+    code === "23514" ||
+    message.includes("trades_action_check") ||
+    message.includes("violates check constraint")
+  );
+}
+
 async function getCurrentUserId() {
   if (!isSupabaseConfigured) {
     throw new SupabaseConfigError();
@@ -70,13 +94,15 @@ function normalizeAction(action: TradeRow["action"]) {
 }
 
 export function tradeFromRow(row: TradeRow): Trade {
+  const tags = row.tags || [];
+
   return {
     id: row.id,
     stockName: row.stock_name,
     stockCode: row.stock_code,
     market: row.market,
     sector: row.sector || "",
-    tags: row.tags || [],
+    tags,
     buyPrice: row.buy_price,
     tradeAmount: row.trade_amount || 0,
     buyDate: row.buy_date,
@@ -95,7 +121,7 @@ export function tradeFromRow(row: TradeRow): Trade {
     planFollowed: row.plan_followed || "",
     exitReview: row.exit_review || "",
     lessonLearned: row.lesson_learned || "",
-    isInitialPosition: Boolean(row.is_initial_position || row.action === "初始持仓")
+    isInitialPosition: Boolean(row.is_initial_position || row.action === "初始持仓" || tags.includes("初始持仓"))
   };
 }
 
@@ -155,6 +181,39 @@ function tradeToInsert(trade: Trade, userId: string) {
   };
 }
 
+function initialPositionToCompatibleInsert(trade: Trade, userId: string) {
+  return {
+    ...tradeToInsert(trade, userId),
+    action: "买入",
+    tags: Array.from(new Set([...(trade.tags || []), "初始持仓"])),
+    why_now: trade.whyNow || "建档前已有持仓，导入用于初始化当前仓位。",
+    is_initial_position: undefined
+  };
+}
+
+async function assertNoDuplicateInitialPosition(trade: Trade) {
+  const targetSymbol = normalizeQuoteSymbol(trade.stockCode, trade.market);
+  const { data, error } = await supabase
+    .from("trades")
+    .select("*")
+    .eq("market", trade.market);
+
+  if (error) {
+    throw error;
+  }
+
+  const hasDuplicate = ((data || []) as TradeRow[])
+    .map(tradeFromRow)
+    .some(
+      (item) =>
+        isInitialPositionTrade(item) && normalizeQuoteSymbol(item.stockCode, item.market) === targetSymbol
+    );
+
+  if (hasDuplicate) {
+    throw new DuplicateInitialPositionError();
+  }
+}
+
 export async function listTrades() {
   await getCurrentUserId();
 
@@ -205,9 +264,29 @@ export async function listTradesByStockCode(stockCode: string) {
 
 export async function createTrade(trade: Trade) {
   const userId = await getCurrentUserId();
+
+  if (trade.isInitialPosition) {
+    await assertNoDuplicateInitialPosition(trade);
+  }
+
   const { error } = await supabase.from("trades").insert(tradeToInsert(trade, userId));
 
   if (error) {
+    if (trade.isInitialPosition && isInitialPositionCompatibilityError(error)) {
+      const { error: fallbackError } = await supabase
+        .from("trades")
+        .insert(initialPositionToCompatibleInsert(trade, userId));
+
+      if (!fallbackError) {
+        cachedTrades = cachedTrades ? [trade, ...cachedTrades] : null;
+        return;
+      }
+
+      if (!isInitialPositionCompatibilityError(fallbackError)) {
+        throw fallbackError;
+      }
+    }
+
     if (isMissingMigrationError(error)) {
       throw new DatabaseMigrationRequiredError();
     }

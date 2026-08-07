@@ -15,6 +15,10 @@ export function getTradeAction(trade: Trade) {
     return "清仓";
   }
 
+  if (trade.isInitialPosition || trade.action === "初始持仓" || trade.tags.includes("初始持仓")) {
+    return "初始持仓";
+  }
+
   return trade.action || "买入";
 }
 

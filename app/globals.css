@@ -48,6 +48,13 @@ select {
   padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
 
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
 @keyframes weekly-report-progress {
   0% {
     transform: translateX(-110%);

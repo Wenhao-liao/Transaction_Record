@@ -705,14 +705,21 @@ export function DashboardClient() {
                       }}
                     >
                     <Card className="border-0">
-                      <CardContent className="flex items-center gap-4 p-4">
+                      <CardContent className="flex items-center gap-3 p-4">
                         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 font-bold text-primary">
                           {position.stockCode.slice(0, 2).toUpperCase()}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="truncate font-bold text-slate-950">{position.stockName}</p>
-                            <span className={cn("rounded-full px-2 py-0.5 text-xs", getActionTone(position.latestAction))}>
+                          <div className="flex items-start gap-2">
+                            <p className="line-clamp-2 min-w-0 flex-1 font-bold leading-5 text-slate-950">
+                              {position.stockName}
+                            </p>
+                            <span
+                              className={cn(
+                                "shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-xs",
+                                getActionTone(position.latestAction)
+                              )}
+                            >
                               {position.latestAction}
                             </span>
                           </div>
@@ -735,7 +742,7 @@ export function DashboardClient() {
                             </div>
                           ) : null}
                         </div>
-                        <div className="text-right">
+                        <div className="w-16 shrink-0 text-right">
                           {(() => {
                             const quote = quotes[position.quoteSymbol];
                             const returnPercent = calculatePositionReturnPercent(position, quote);
