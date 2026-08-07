@@ -25,7 +25,8 @@ export const trades: Trade[] = [
     currentReturn: "+6.8%",
     planFollowed: "",
     exitReview: "",
-    lessonLearned: ""
+    lessonLearned: "",
+    isInitialPosition: false
   },
   {
     id: "0700-2026-06-21",
@@ -51,7 +52,8 @@ export const trades: Trade[] = [
     currentReturn: "+3.1%",
     planFollowed: "",
     exitReview: "",
-    lessonLearned: ""
+    lessonLearned: "",
+    isInitialPosition: false
   },
   {
     id: "300750-2026-06-10",
@@ -77,7 +79,8 @@ export const trades: Trade[] = [
     currentReturn: "-1.4%",
     planFollowed: "",
     exitReview: "",
-    lessonLearned: ""
+    lessonLearned: "",
+    isInitialPosition: false
   }
 ];
 

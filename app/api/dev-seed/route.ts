@@ -36,15 +36,17 @@ function toTradeInsert(trade: Trade, userId: string) {
     current_return: trade.currentReturn,
     plan_followed: trade.planFollowed,
     exit_review: trade.exitReview,
-    lesson_learned: trade.lessonLearned
+    lesson_learned: trade.lessonLearned,
+    is_initial_position: trade.isInitialPosition
   };
 }
 
-function createSeedTrade(trade: Omit<Trade, "status" | "currentReturn">): Trade {
+function createSeedTrade(trade: Omit<Trade, "status" | "currentReturn" | "isInitialPosition">): Trade {
   return {
     ...trade,
     status: getStatusForAction(trade.action),
-    currentReturn: "0%"
+    currentReturn: "0%",
+    isInitialPosition: false
   };
 }
 
